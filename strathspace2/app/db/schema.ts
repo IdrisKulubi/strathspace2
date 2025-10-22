@@ -20,27 +20,23 @@ export const users = pgTable(
     id: text("id").primaryKey(),
     name: text("name").notNull(),
     email: text("email").notNull().unique(),
-    role: text("role").$type<"user" | "admin">().default("user"),
-    emailVerified: timestamp("emailVerified"),
+    emailVerified: boolean("email_verified").default(false).notNull(),
     image: text("image"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+    role: text("role").default("user"),
+    profileCompleted: boolean("profile_completed").default(false),
+    hasProfile: boolean("has_profile").default(false),
+    phoneNumber: text("phone_number").notNull(),
+    googleId: text("google_id"),
+    googleProfileData: text("google_profile_data"),
+    // Additional fields for the app
     lastActive: timestamp("last_active").defaultNow().notNull(),
     isOnline: boolean("is_online").default(false),
     profilePhoto: text("profile_photo"),
-    phoneNumber: text("phone_number").notNull(),
-    // Better Auth specific fields for Google OAuth
-    googleId: text("google_id"),
-    googleProfileData: json("google_profile_data").$type<{
-      sub: string;
-      name: string;
-      given_name: string;
-      family_name: string;
-      picture: string;
-      email: string;
-      email_verified: boolean;
-      locale?: string;
-    }>(),
   },
   (table) => ({
     emailIdx: index("user_email_idx").on(table.email),
@@ -51,47 +47,51 @@ export const users = pgTable(
 );
 
 // Better Auth tables
-export const accounts = pgTable(
-  "account",
-  {
-    id: text("id").primaryKey(),
-    accountId: text("accountId").notNull(),
-    providerId: text("providerId").notNull(),
-    userId: text("userId")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    accessToken: text("accessToken"),
-    refreshToken: text("refreshToken"),
-    idToken: text("idToken"),
-    accessTokenExpiresAt: timestamp("accessTokenExpiresAt"),
-    refreshTokenExpiresAt: timestamp("refreshTokenExpiresAt"),
-    scope: text("scope"),
-    password: text("password"),
-    createdAt: timestamp("createdAt").notNull(),
-    updatedAt: timestamp("updatedAt").notNull(),
-  }
-);
+export const accounts = pgTable("account", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull(),
+  providerId: text("provider_id").notNull(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  idToken: text("id_token"),
+  accessTokenExpiresAt: timestamp("access_token_expires_at"),
+  refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
+  scope: text("scope"),
+  password: text("password"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
 
 export const sessions = pgTable("session", {
   id: text("id").primaryKey(),
-  expiresAt: timestamp("expiresAt").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
   token: text("token").notNull().unique(),
-  createdAt: timestamp("createdAt").notNull(),
-  updatedAt: timestamp("updatedAt").notNull(),
-  ipAddress: text("ipAddress"),
-  userAgent: text("userAgent"),
-  userId: text("userId")
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .$onUpdate(() => new Date())
+    .notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
 });
 
-export const verificationTokens = pgTable("verificationToken", {
+export const verificationTokens = pgTable("verification", {
   id: text("id").primaryKey(),
   identifier: text("identifier").notNull(),
-  token: text("token").notNull(),
-  expiresAt: timestamp("expiresAt").notNull(),
-  createdAt: timestamp("createdAt"),
-  updatedAt: timestamp("updatedAt"),
+  value: text("value").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
 });
 
 // Extended user profiles

@@ -1,29 +1,17 @@
-'use client';
+import { auth } from "../lib/auth";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { SignOutButton } from "./sign-out-button";
 
-import { useSession } from '../lib/auth-client';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+export default async function DashboardPage() {
+  // Get session using server-side API as per Better Auth docs
+  const session = await auth.api.getSession({
+    headers: await headers()
+  });
 
-export default function DashboardPage() {
-  const { data: session, isPending } = useSession();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!isPending && !session) {
-      router.push('/login');
-    }
-  }, [session, isPending, router]);
-
-  if (isPending) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
+  // Redirect if not authenticated
   if (!session) {
-    return null; // Will redirect to login
+    redirect("/login");
   }
 
   return (
@@ -34,15 +22,7 @@ export default function DashboardPage() {
             <h1 className="text-2xl font-bold text-gray-900">
               Welcome to StrathSpace Dashboard
             </h1>
-            <button
-              onClick={() => {
-                // Sign out logic would go here
-                router.push('/login');
-              }}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
-            >
-              Sign Out
-            </button>
+            <SignOutButton />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

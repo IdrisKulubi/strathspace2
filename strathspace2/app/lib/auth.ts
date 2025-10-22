@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { nextCookies } from "better-auth/next-js";
 import { users, accounts, sessions, verificationTokens } from "../db/schema";
 import db from "../db/drizzle";
 import { eq } from "drizzle-orm";
@@ -14,10 +15,10 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {
-      users,
-      accounts,
-      sessions,
-      verificationTokens,
+      user: users,
+      account: accounts,
+      session: sessions,
+      verification: verificationTokens,
     },
   }),
   emailAndPassword: {
@@ -76,6 +77,16 @@ export const auth = betterAuth({
     },
     useSecureCookies: process.env.NODE_ENV === "production",
   },
+  // Email verification settings (disabled since we trust Google OAuth)
+  emailVerification: {
+    sendOnSignUp: false,
+    autoSignInAfterVerification: true,
+  },
+  
+  // Next.js specific plugins
+  plugins: [
+    nextCookies(), // Automatically handle cookies in server actions
+  ],
   callbacks: {
     async onSignUp({
       user,
@@ -117,11 +128,11 @@ export const auth = betterAuth({
             .update(users)
             .set({
               googleId: account.accountId,
-              googleProfileData: googleProfile,
-              emailVerified: new Date(),
+              googleProfileData: JSON.stringify(googleProfile),
+              emailVerified: true,
               email: normalizedEmail, // Ensure normalized email is stored
             })
-            .where(eq(users.id, user.id) as any);
+            .where(eq(users.id as any, user.id) as any);
         }
 
         // Log successful authentication
@@ -168,7 +179,7 @@ export const auth = betterAuth({
             isOnline: true,
             email: normalizedEmail, // Ensure normalized email is stored
           })
-          .where(eq(users.id, user.id) as any);
+          .where(eq(users.id as any, user.id) as any);
 
         // Log successful authentication
         if (request) {
