@@ -29,11 +29,24 @@ export const users = pgTable(
     isOnline: boolean("is_online").default(false),
     profilePhoto: text("profile_photo"),
     phoneNumber: text("phone_number").notNull(),
+    // Better Auth specific fields for Google OAuth
+    googleId: text("google_id"),
+    googleProfileData: json("google_profile_data").$type<{
+      sub: string;
+      name: string;
+      given_name: string;
+      family_name: string;
+      picture: string;
+      email: string;
+      email_verified: boolean;
+      locale?: string;
+    }>(),
   },
   (table) => ({
     emailIdx: index("user_email_idx").on(table.email),
     createdAtIdx: index("user_created_at_idx").on(table.createdAt),
     lastActiveIdx: index("user_last_active_idx").on(table.lastActive),
+    googleIdIdx: index("user_google_id_idx").on(table.googleId),
   })
 );
 
