@@ -10,6 +10,12 @@ import {
   logAuthError,
   getEmailDomainInfo,
 } from "./auth/validation";
+import {
+  recordAuthMetric,
+  recordAuthError,
+  trackAuthSession,
+  withAuthMonitoring,
+} from "./auth/monitoring";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -97,6 +103,7 @@ export const auth = betterAuth({
       account: any;
       request: any;
     }) {
+      const startTime = Date.now();
       try {
         // Validate and normalize email (allows all valid email formats)
         const normalizedEmail = validateAndNormalizeEmail(user.email);
@@ -135,6 +142,25 @@ export const auth = betterAuth({
             .where(eq(users.id as any, user.id) as any);
         }
 
+        // Record signup metric
+        await recordAuthMetric({
+          event: 'signup',
+          userId: user.id,
+          email: normalizedEmail,
+          provider: account?.providerId || 'unknown',
+          duration: Date.now() - startTime,
+          success: true,
+          userAgent: request?.headers?.get('user-agent') || undefined,
+          ipAddress: request?.headers?.get('x-forwarded-for') || 
+                     request?.headers?.get('x-real-ip') || undefined,
+          timestamp: new Date(),
+          metadata: {
+            domain: emailInfo.domain,
+            isEducational: emailInfo.isEducational,
+            isCommonProvider: emailInfo.isCommonProvider,
+          },
+        });
+
         // Log successful authentication
         if (request) {
           logSuccessfulAuth(normalizedEmail, user.id, request);
@@ -142,6 +168,20 @@ export const auth = betterAuth({
 
         return { user: { ...user, email: normalizedEmail } };
       } catch (error) {
+        // Record signup error
+        await recordAuthError(error as Error, {
+          userId: user?.id,
+          email: user?.email,
+          operation: 'signup',
+          userAgent: request?.headers?.get('user-agent') || undefined,
+          ipAddress: request?.headers?.get('x-forwarded-for') || 
+                     request?.headers?.get('x-real-ip') || undefined,
+          metadata: {
+            provider: account?.providerId,
+            duration: Date.now() - startTime,
+          },
+        });
+
         if (request) {
           logAuthError(error as Error, user.email, request);
         }
@@ -158,6 +198,7 @@ export const auth = betterAuth({
       account: any;
       request: any;
     }) {
+      const startTime = Date.now();
       try {
         // Validate and normalize email (allows all valid email formats)
         const normalizedEmail = validateAndNormalizeEmail(user.email);
@@ -181,6 +222,25 @@ export const auth = betterAuth({
           })
           .where(eq(users.id as any, user.id) as any);
 
+        // Record login metric
+        await recordAuthMetric({
+          event: 'login',
+          userId: user.id,
+          email: normalizedEmail,
+          provider: account?.providerId || 'unknown',
+          duration: Date.now() - startTime,
+          success: true,
+          userAgent: request?.headers?.get('user-agent') || undefined,
+          ipAddress: request?.headers?.get('x-forwarded-for') || 
+                     request?.headers?.get('x-real-ip') || undefined,
+          timestamp: new Date(),
+          metadata: {
+            domain: emailInfo.domain,
+            isEducational: emailInfo.isEducational,
+            isCommonProvider: emailInfo.isCommonProvider,
+          },
+        });
+
         // Log successful authentication
         if (request) {
           logSuccessfulAuth(normalizedEmail, user.id, request);
@@ -188,6 +248,20 @@ export const auth = betterAuth({
 
         return { user: { ...user, email: normalizedEmail } };
       } catch (error) {
+        // Record login error
+        await recordAuthError(error as Error, {
+          userId: user?.id,
+          email: user?.email,
+          operation: 'login',
+          userAgent: request?.headers?.get('user-agent') || undefined,
+          ipAddress: request?.headers?.get('x-forwarded-for') || 
+                     request?.headers?.get('x-real-ip') || undefined,
+          metadata: {
+            provider: account?.providerId,
+            duration: Date.now() - startTime,
+          },
+        });
+
         if (request) {
           logAuthError(error as Error, user.email, request);
         }
@@ -196,6 +270,18 @@ export const auth = betterAuth({
     },
 
     async onError({ error, request }: { error: any; request: any }) {
+      // Record auth error in monitoring system
+      await recordAuthError(error, {
+        operation: 'auth_callback',
+        userAgent: request?.headers?.get('user-agent') || undefined,
+        ipAddress: request?.headers?.get('x-forwarded-for') || 
+                   request?.headers?.get('x-real-ip') || undefined,
+        metadata: {
+          errorName: error.name,
+          errorCode: error.code,
+        },
+      });
+
       if (request) {
         logAuthError(error, undefined, request);
       } else {

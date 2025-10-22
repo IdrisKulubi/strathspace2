@@ -5,10 +5,10 @@ import * as dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
 
 export default {
-  schema: "./src/server/db/schema.ts",
+  schema: "./app/db/schema.ts",
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL!,
+    url: process.env.POSTGRES_URL!,
   },
 } satisfies Config;

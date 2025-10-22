@@ -15,6 +15,13 @@
       "when": 1761095576704,
       "tag": "0001_wet_mojo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1761130284165,
+      "tag": "0002_legal_living_lightning",
+      "breakpoints": true
     }
   ]
 }

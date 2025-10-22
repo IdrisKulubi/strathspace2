@@ -384,7 +384,79 @@ export type Profile = typeof profiles.$inferSelect & {
   matchId?: string;
 };
 
+// Authentication monitoring tables
+export const authMetrics = pgTable(
+  "auth_metrics",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    event: text("event").notNull(), // 'login', 'logout', 'signup', 'error', 'session_refresh'
+    userId: text("user_id").references(() => users.id),
+    email: text("email"),
+    provider: text("provider"), // 'google', 'email', etc.
+    duration: integer("duration"), // in milliseconds
+    success: boolean("success").notNull(),
+    errorType: text("error_type"),
+    errorMessage: text("error_message"),
+    userAgent: text("user_agent"),
+    ipAddress: text("ip_address"),
+    timestamp: timestamp("timestamp").defaultNow().notNull(),
+    metadata: text("metadata"), // JSON string for additional data
+  },
+  (table) => ({
+    eventIdx: index("auth_metrics_event_idx").on(table.event),
+    timestampIdx: index("auth_metrics_timestamp_idx").on(table.timestamp),
+    userIdIdx: index("auth_metrics_user_id_idx").on(table.userId),
+    successIdx: index("auth_metrics_success_idx").on(table.success),
+    providerIdx: index("auth_metrics_provider_idx").on(table.provider),
+  })
+);
+
+export const authSessions = pgTable(
+  "auth_sessions_tracking",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    sessionId: text("session_id").notNull(),
+    userId: text("user_id").notNull().references(() => users.id),
+    action: text("action").notNull(), // 'created', 'refreshed', 'expired', 'revoked'
+    timestamp: timestamp("timestamp").defaultNow().notNull(),
+    metadata: text("metadata"), // JSON string for additional data
+  },
+  (table) => ({
+    sessionIdIdx: index("auth_sessions_tracking_session_id_idx").on(table.sessionId),
+    userIdIdx: index("auth_sessions_tracking_user_id_idx").on(table.userId),
+    timestampIdx: index("auth_sessions_tracking_timestamp_idx").on(table.timestamp),
+    actionIdx: index("auth_sessions_tracking_action_idx").on(table.action),
+  })
+);
+
+export const authErrors = pgTable(
+  "auth_errors",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    errorType: text("error_type").notNull(),
+    errorMessage: text("error_message").notNull(),
+    stackTrace: text("stack_trace"),
+    userId: text("user_id").references(() => users.id),
+    email: text("email"),
+    operation: text("operation"), // 'login', 'signup', 'session_refresh', etc.
+    userAgent: text("user_agent"),
+    ipAddress: text("ip_address"),
+    timestamp: timestamp("timestamp").defaultNow().notNull(),
+    metadata: text("metadata"), // JSON string for additional data
+  },
+  (table) => ({
+    errorTypeIdx: index("auth_errors_error_type_idx").on(table.errorType),
+    timestampIdx: index("auth_errors_timestamp_idx").on(table.timestamp),
+    userIdIdx: index("auth_errors_user_id_idx").on(table.userId),
+    operationIdx: index("auth_errors_operation_idx").on(table.operation),
+  })
+);
+
 // Export the Message type if needed
 export type Message = typeof messages.$inferSelect;
 
 export type ProfileView = typeof profileViews.$inferSelect;
+
+export type AuthMetric = typeof authMetrics.$inferSelect;
+export type AuthSession = typeof authSessions.$inferSelect;
+export type AuthError = typeof authErrors.$inferSelect;
